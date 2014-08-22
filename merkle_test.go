@@ -5,41 +5,48 @@ import (
 	"testing"
 )
 
-type Root struct {
+type Foo struct {
 	A int
 	B bool
 	C string
-	D map[string]*Foo
+	D map[string]*Bazz
 	E []*Bar
-	M *Merkle
 }
 
-type Foo struct {
+type Bazz struct {
 	S int
 	T int
 	U int
-	M *Merkle
 }
 
 type Bar struct {
 	X int
 	Y int
 	Z int
-	M *Merkle
 }
 
 func Test_Foo(t *testing.T) {
 
-	r := &Root{}
-	m, _ := New(r)
+	foo := &Foo{}
 
-	// m.Get("D").Get("foo1").Get()
+	//create root of tree
+	root, err := New(foo)
+	if err != nil {
+		panic(err)
+	}
 
-	r.D["something"].S
+	//set values
+	root.Set("A", 42)
+	root.Set("B", false)
+	root.Set("C", "ping")
 
-	subm, _ := m.Get()
+	//bind events
+	root.On("C", func() {
+		fmt.Println("C changed")
+	})
 
-	// m.Put("")
+	root.(*MerkleStruct)
 
-	fmt.Printf("result = %s", result)
+	//get underlying object
+	fmt.Printf("=> %+v", root.Interface().(*Foo))
 }
