@@ -1,52 +1,43 @@
 package merkle
 
 import (
-	"fmt"
+	"bytes"
 	"testing"
 )
 
 type Foo struct {
+	Merkle
 	A int
 	B bool
 	C string
-	D map[string]*Bazz
-	E []*Bar
-}
-
-type Bazz struct {
-	S int
-	T int
-	U int
-}
-
-type Bar struct {
-	X int
-	Y int
-	Z int
 }
 
 func Test_Foo(t *testing.T) {
 
-	foo := &Foo{}
-
-	//create root of tree
-	root, err := New(foo)
-	if err != nil {
-		panic(err)
+	foo1 := &Foo{
+		A: 42,
+		B: true,
+		C: "foo",
 	}
 
-	//set values
-	root.Set("A", 42)
-	root.Set("B", false)
-	root.Set("C", "ping")
+	/*merkle.*/ Init(foo1)
 
-	//bind events
-	root.On("C", func() {
-		fmt.Println("C changed")
-	})
+	foo2 := &Foo{
+		A: 35,
+		B: true,
+		C: "foo",
+	}
 
-	root.(*MerkleStruct)
+	/*merkle.*/ Init(foo2)
 
-	//get underlying object
-	fmt.Printf("=> %+v", root.Interface().(*Foo))
+	if bytes.Compare(foo1.Hash, foo2.Hash) == 0 {
+		t.Error("Hashes should be different")
+	}
+
+	foo2.A = 42
+	foo2.Update()
+
+	if bytes.Compare(foo1.Hash, foo2.Hash) != 0 {
+		t.Error("Hashes should be equal")
+	}
 }

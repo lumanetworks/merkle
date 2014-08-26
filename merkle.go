@@ -2,99 +2,84 @@ package merkle
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
-//Merkle ...
-type Merkle interface {
-	Get(string) (Merkle, error)
-	Set(interface{}) error
-	Interface() (interface{}, error)
-}
+//Init any struct with an embedded merkle object
+func Init(obj interface{}) error {
 
-//New allocates a new Merkle tree using the provided object
-func New(item interface{}) (Merkle, error) {
-	b := newBase(nil)
+	vptr := reflect.ValueOf(obj)
+	v := vptr.Elem()
 
-	t := reflect.TypeOf(item)
-	switch t.Kind() {
-	case reflect.Struct:
-		return newStruct(b)
-	case reflect.Int:
-		return newInt(b)
+	if v.Kind() != reflect.Struct {
+		return errors.New("Must be struct [pointer]")
 	}
 
-	return nil, errors.New("Invalid object")
+	mfield := v.FieldByName("Merkle")
+
+	if !mfield.IsValid() {
+		return errors.New("Must have a 'Merkle' property")
+	}
+
+	cont := mfield.FieldByName("Container")
+	cont.Set(vptr)
+
+	initd := mfield.FieldByName("Initd")
+	initd.SetBool(true)
+
+	return nil
 }
 
-// how to hash
+//Merkle state
+type Merkle struct {
+	Initd     bool
+	Container interface{}
+	Fields    []reflect.StructField
+	Hash      []byte
+}
+
+//Update this Merkle tree
+func (m *Merkle) Update() error {
+
+	if !m.Initd {
+		return errors.New("Must merkle.Init() this object first")
+	}
+
+	t := reflect.TypeOf(m.Container)
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	name := t.Name()
+
+	numFields := t.NumField()
+
+	m.Fields = make([]reflect.StructField, numFields)
+
+	for i := 0; i < numFields; i++ {
+		f := t.Field(i)
+		//TODO
+		fmt.Printf("%s: %s\n", name, f.Name)
+		m.Fields[i] = f
+	}
+
+	return nil
+}
+
+//Set the value of this node
+// func (m *Merkle) Set(_ interface{}) error {
+// 	return errors.New("Not implemented")
+// }
+
+//Return the underlying Interface
+// func (m *Merkle) Interface() (interface{}, error) {
+// 	return *m.val, nil
+// }
+
+// Hashing example
 // h := sha1.New()
 // io.WriteString(h, "His money is twice tainted:")
 // io.WriteString(h, " 'taint yours and 'taint mine.")
 // fmt.Printf("% x", h.Sum(nil))
-
-//=============
-
-type mBase struct {
-	parent Merkle
-	val    *interface{}
-}
-
-func newBase(parent Merkle) *mBase {
-	return &mBase{parent: parent}
-}
-
-//Get a child node of this Merkle tree
-func (m *mBase) Get(_ string) (Merkle, error) {
-	return nil, errors.New("Not implemented")
-}
-
-//Set the value of this node
-func (m *mBase) Set(_ interface{}) error {
-	return errors.New("Not implemented")
-}
-
-//Return the underlying Interface
-func (m *mBase) Interface() (interface{}, error) {
-	return *m.val, nil
-}
-
-//============
-
-type mStruct struct {
-	*mBase
-	fields []Merkle
-}
-
-func newStruct(b *mBase) (*mStruct, error) {
-	return &mStruct{mBase: b}, nil
-}
-
-//Get ...
-func (m *mStruct) Get(field string) (Merkle, error) {
-	return m.parent, nil
-}
-
-//===========
-
-type mInt struct {
-	*mBase
-	val    *int
-	fields []Merkle
-}
-
-func newInt(b *mBase) (*mInt, error) {
-	return &mInt{mBase: b}, nil
-}
-
-//Set ...
-func (m *mInt) Set(obj interface{}) error {
-	*m.val = obj.(int)
-	return nil
-}
-
-func (m *mInt) Interface() (interface{}, error) {
-	return *m.val, nil
-}
-
-//============
