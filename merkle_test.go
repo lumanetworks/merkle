@@ -6,7 +6,7 @@ import (
 )
 
 type Foo struct {
-	Merkle
+	*Merkle
 	A int
 	B bool
 	C string
@@ -20,7 +20,10 @@ func Test_Foo(t *testing.T) {
 		C: "foo",
 	}
 
-	/*merkle.*/ Init(foo1)
+	if err := /*merkle.*/ Init(foo1); err != nil {
+		t.Errorf("Failed to initialise 'foo1': %s", err)
+		return
+	}
 
 	foo2 := &Foo{
 		A: 35,
@@ -28,14 +31,22 @@ func Test_Foo(t *testing.T) {
 		C: "foo",
 	}
 
-	/*merkle.*/ Init(foo2)
+	if err := /*merkle.*/ Init(foo2); err != nil {
+		t.Errorf("Failed to initialise 'foo2': %s", err)
+		return
+	}
 
 	if bytes.Compare(foo1.Hash, foo2.Hash) == 0 {
 		t.Error("Hashes should be different")
+		return
 	}
 
 	foo2.A = 42
-	foo2.Update()
+
+	if err := foo2.Update(); err != nil {
+		t.Errorf("Failed to update 'foo2': %s", err)
+		return
+	}
 
 	if bytes.Compare(foo1.Hash, foo2.Hash) != 0 {
 		t.Error("Hashes should be equal")

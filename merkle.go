@@ -16,18 +16,33 @@ func Init(obj interface{}) error {
 		return errors.New("Must be struct [pointer]")
 	}
 
-	mfield := v.FieldByName("Merkle")
+	mptr := v.FieldByName("Merkle")
 
-	if !mfield.IsValid() {
-		return errors.New("Must have a 'Merkle' property")
+	if mptr.Kind() != reflect.Ptr {
+		return errors.New("Must have an embedded 'Merkle' pointer")
 	}
 
-	cont := mfield.FieldByName("Container")
-	cont.Set(vptr)
+	m := &Merkle{}
 
-	initd := mfield.FieldByName("Initd")
-	initd.SetBool(true)
+	mptr.Set(reflect.ValueOf(m))
 
+	m.Container = obj
+
+	//Extract struct fields
+	t := v.Type()
+	numFields := t.NumField() - 1 //Merkle field is not included
+
+	m.Fields = make([]reflect.StructField, numFields)
+
+	for i := 1; i <= numFields; i++ {
+		f := t.Field(i)
+		fmt.Printf("Init %s\n", f.Name)
+		//TODO: Recursive initialise field
+		m.Fields[i-1] = f
+	}
+
+	m.Initd = true
+	fmt.Printf("Init %+v\n", obj)
 	return nil
 }
 
@@ -41,28 +56,12 @@ type Merkle struct {
 
 //Update this Merkle tree
 func (m *Merkle) Update() error {
-
-	if !m.Initd {
+	if m == nil {
 		return errors.New("Must merkle.Init() this object first")
 	}
 
-	t := reflect.TypeOf(m.Container)
-
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	name := t.Name()
-
-	numFields := t.NumField()
-
-	m.Fields = make([]reflect.StructField, numFields)
-
-	for i := 0; i < numFields; i++ {
-		f := t.Field(i)
-		//TODO
-		fmt.Printf("%s: %s\n", name, f.Name)
-		m.Fields[i] = f
+	for _, f := range m.Fields {
+		fmt.Printf("Update %s\n", f.Name)
 	}
 
 	return nil
