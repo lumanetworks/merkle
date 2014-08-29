@@ -1,54 +1,125 @@
 package merkle
 
-import (
-	"bytes"
-	"testing"
-)
+import "testing"
+
+//==============================
 
 type Foo struct {
-	*Merkle
-	A int
+	HashItem
+	A uint8
 	B bool
 	C string
 }
 
-func Test_Foo(t *testing.T) {
+func (f *Foo) Hash() HashVal {
+	h := NewMHash()
+	h.HashWrite(f.A)
+	h.HashWrite(f.B)
+	h.HashWrite(f.C)
+	return h.SumHashVal(&f.cache)
+}
 
-	foo1 := &Foo{
+func Test_Simple(t *testing.T) {
+
+	var foo1 = &Foo{
 		A: 42,
 		B: true,
 		C: "foo",
 	}
 
-	if err := /*merkle.*/ Init(foo1); err != nil {
-		t.Errorf("Failed to initialise 'foo1': %s", err)
-		return
-	}
-
-	foo2 := &Foo{
+	var foo2 = &Foo{
 		A: 35,
 		B: true,
 		C: "foo",
 	}
 
-	if err := /*merkle.*/ Init(foo2); err != nil {
-		t.Errorf("Failed to initialise 'foo2': %s", err)
+	if h1, h2 := Hash(foo1), Hash(foo2); h1 == h2 {
+		t.Errorf("Hashes should be different (%v == %v)", h1, h2)
 		return
 	}
 
-	if bytes.Compare(foo1.Hash, foo2.Hash) == 0 {
-		t.Error("Hashes should be different")
-		return
-	}
-
+	//make equal then rehash
 	foo2.A = 42
+	Update(foo2)
 
-	if err := foo2.Update(); err != nil {
-		t.Errorf("Failed to update 'foo2': %s", err)
+	if h1, h2 := Hash(foo1), Hash(foo2); h1 != h2 {
+		t.Errorf("Hashes should be equal (%v != %v)", h1, h2)
 		return
-	}
-
-	if bytes.Compare(foo1.Hash, foo2.Hash) != 0 {
-		t.Error("Hashes should be equal")
 	}
 }
+
+//==============================
+
+type Ping struct {
+	HashItem
+	D uint8
+	E bool
+	F []*Pong
+}
+
+// func (p *Ping) Hash() HashVal {
+// 	h := NewMHash()
+// 	h.HashWrite(p.D)
+// 	h.HashWrite(p.E)
+// 	for _, f := range p.F {
+// 		h.HashWrite(f)
+// 	}
+// 	return h.SumHashVal(&p.cache)
+// }
+
+type Pong struct {
+	HashItem
+	X uint8
+	Y uint8
+}
+
+// func (p *Pong) Hash() HashVal {
+// 	h := NewMHash()
+// 	h.HashWrite(p.X)
+// 	h.HashWrite(p.Y)
+// 	v := h.SumHashVal(&p.cache)
+// 	return v
+// }
+
+func Test_Nested(t *testing.T) {
+
+	//create ping1
+	var ping1 = &Ping{
+		D: 89,
+		E: false,
+	}
+
+	ping1.F = []*Pong{
+		&Pong{X: 2, Y: 3, HashItem: HashItem{parent: ping1}},
+		&Pong{X: 4, Y: 5, HashItem: HashItem{parent: ping1}},
+	}
+
+	//create ping2
+	var ping2 = &Ping{
+		D: 90,
+		E: true,
+	}
+
+	ping2.F = []*Pong{
+		&Pong{X: 2, Y: 3, HashItem: HashItem{parent: ping2}},
+		&Pong{X: 5, Y: 5, HashItem: HashItem{parent: ping2}},
+	}
+
+	//hash em
+	if h1, h2 := Hash(ping1), Hash(ping2); h1 == h2 {
+		t.Errorf("Hashes should be different (%v == %v)", h1, h2)
+		return
+	}
+
+	ping2.D = 89
+	ping2.E = false
+	ping2.F[1].X = 4
+	Update(ping2.F[1])
+
+	if h1, h2 := Hash(ping1), Hash(ping2); h1 != h2 {
+		t.Errorf("Hashes should be equal (%v != %v)", h1, h2)
+		return
+	}
+}
+
+//==============================
