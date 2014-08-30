@@ -12,11 +12,11 @@ type Foo struct {
 }
 
 func (f *Foo) Hash() HashVal {
-	h := NewMHash()
-	h.HashWrite(f.A)
-	h.HashWrite(f.B)
-	h.HashWrite(f.C)
-	return h.SumHashVal(&f.cache)
+	h := NewHash()
+	h.Write(f.A)
+	h.Write(f.B)
+	h.Write(f.C)
+	return h.SumAndCache(&f.Cache)
 }
 
 func Test_Simple(t *testing.T) {
@@ -58,13 +58,13 @@ type Ping struct {
 }
 
 // func (p *Ping) Hash() HashVal {
-// 	h := NewMHash()
-// 	h.HashWrite(p.D)
-// 	h.HashWrite(p.E)
+// 	h := NewHash()
+// 	h.Write(p.D)
+// 	h.Write(p.E)
 // 	for _, f := range p.F {
-// 		h.HashWrite(f)
+// 		h.Write(f)
 // 	}
-// 	return h.SumHashVal(&p.cache)
+// 	return h.SumAndCache(&p.Cache)
 // }
 
 type Pong struct {
@@ -74,10 +74,10 @@ type Pong struct {
 }
 
 // func (p *Pong) Hash() HashVal {
-// 	h := NewMHash()
-// 	h.HashWrite(p.X)
-// 	h.HashWrite(p.Y)
-// 	v := h.SumHashVal(&p.cache)
+// 	h := NewHash()
+// 	h.Write(p.X)
+// 	h.Write(p.Y)
+// 	v := h.SumAndCache(&p.Cache)
 // 	return v
 // }
 
@@ -90,8 +90,8 @@ func Test_Nested(t *testing.T) {
 	}
 
 	ping1.F = []*Pong{
-		&Pong{X: 2, Y: 3, HashItem: HashItem{parent: ping1}},
-		&Pong{X: 4, Y: 5, HashItem: HashItem{parent: ping1}},
+		&Pong{X: 2, Y: 3, HashItem: HashItem{ParentItem: ping1}},
+		&Pong{X: 4, Y: 5, HashItem: HashItem{ParentItem: ping1}},
 	}
 
 	//create ping2
@@ -101,8 +101,8 @@ func Test_Nested(t *testing.T) {
 	}
 
 	ping2.F = []*Pong{
-		&Pong{X: 2, Y: 3, HashItem: HashItem{parent: ping2}},
-		&Pong{X: 5, Y: 5, HashItem: HashItem{parent: ping2}},
+		&Pong{X: 2, Y: 3, HashItem: HashItem{ParentItem: ping2}},
+		&Pong{X: 5, Y: 5, HashItem: HashItem{ParentItem: ping2}},
 	}
 
 	//hash em

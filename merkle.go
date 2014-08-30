@@ -41,31 +41,37 @@ type Item interface {
 // HashCache implements CachingHasher; it's meant to be embedded in your
 // structs to make updating hash trees more efficient.
 type HashCache struct {
-	cache HashVal
+	Cache HashVal
 }
 
 // CachedHash implements CachingHasher.
 func (h *HashCache) CachedHash() *HashVal {
-	return &h.cache
+	return &h.Cache
 }
 
-// HashItem ...
+// HashItem implements Item; it implements the most common case:
+// the Parent item stored as a struct field with a simple Parent()
+// method to retrieve it
 type HashItem struct {
 	HashCache
-	parent Item
+	ParentItem Item
 }
 
-// Parent ...
+// Parent retrieves the item's parent
 func (i *HashItem) Parent() Item {
-	return i.parent
+	return i.ParentItem
 }
+
+// =================
 
 // hash helpers
-var trueByte = []byte{0xff}
-var falseByte = []byte{0x00}
+const trueVal, falseVal = HashVal(uint64(1)), HashVal(uint64(0))
 
+// stored types
 var hashCacheType = reflect.TypeOf(HashCache{})
 var hashItemType = reflect.TypeOf(HashItem{})
+
+// =================
 
 // Hash returns something's hash, using a cached hash or Hash() method if
 // available.
@@ -95,13 +101,13 @@ func Hash(i interface{}) HashVal {
 		return Hash([]byte(i))
 	case bool:
 		if i {
-			return Hash(trueByte)
+			return trueVal
 		}
-		return Hash(falseByte)
+		return falseVal
 	case []byte:
-		h := NewMHash()
+		h := newCrc()
 		h.Write(i)
-		return h.SumHashVal(nil)
+		return HashVal(h.Sum64())
 	}
 
 	//===================
@@ -119,7 +125,7 @@ func Hash(i interface{}) HashVal {
 	//reflect on struct
 	case reflect.Struct:
 		var cacheptr *HashVal
-		h := NewMHash()
+		h := NewHash()
 		//hash all fields
 		for i := 0; i < val.NumField(); i++ {
 			field := val.Field(i)
@@ -127,24 +133,24 @@ func Hash(i interface{}) HashVal {
 			//ignore meta data and store cache address
 			if ftype == hashCacheType {
 				hashCache := field.Interface().(HashCache)
-				cacheptr = &hashCache.cache
+				cacheptr = &hashCache.Cache
 				continue
 			} else if ftype == hashItemType {
 				hashItem := field.Interface().(HashItem)
-				cacheptr = &hashItem.cache
+				cacheptr = &hashItem.Cache
 				continue
 			}
 
-			h.HashWrite(field.Interface())
+			h.Write(field.Interface())
 		}
-		return h.SumHashVal(cacheptr)
+		return h.SumAndCache(cacheptr)
 	//reflect on slices
 	case reflect.Slice:
-		h := NewMHash()
+		h := NewHash()
 		for i := 0; i < val.Len(); i++ {
-			h.HashWrite(val.Index(i).Interface())
+			h.Write(val.Index(i).Interface())
 		}
-		return h.SumHashVal(nil)
+		return h.Sum()
 	}
 
 	panic("Unable to hash type: " + val.Kind().String())
