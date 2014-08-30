@@ -33,7 +33,6 @@ Now you can `merkle.Hash()` your `Foo`s and summarise their contents:
 
 ``` go
 func main() {
-
 	var foo1 = &Foo{
 		A: 42,
 		B: true,
@@ -46,12 +45,12 @@ func main() {
 		C: "foo",
 	}
 
-	println("Does foo1 :", merkle.Hash(foo1) != merkle.Hash(foo2))
+	println("foo1 == foo2:", merkle.Hash(foo1) == merkle.Hash(foo2))
 
 	foo2.A = 42
 	merkle.Update(foo2)
 
-	println("Hashes are now the same:", merkle.Hash(foo1) == merkle.Hash(foo2))
+	println("foo1 == foo2:", merkle.Hash(foo1) == merkle.Hash(foo2))
 }
 ```
 
@@ -80,7 +79,7 @@ See GoDoc
 
 #### MIT License
 
-Copyright © 2014 Luma Networks &lt;contact@lumanetworks.com&gt;
+Copyright © 2014 Luma Networks <contact@lumanetworks.com>
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
